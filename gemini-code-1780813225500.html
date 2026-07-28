@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多組數值最佳解計算器 (支援自由收合版)</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            padding: 20px;
+        }
+        .main-container {
+            max-width: 1300px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 25px;
+            border-bottom: 3px solid #3182ce;
+            padding-bottom: 10px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+        .card-title {
+            font-weight: bold;
+            color: #2b6cb0;
+            font-size: 16px;
+        }
+        .toggle-card-btn {
+            background-color: #cbd5e0;
+            color: #4a5568;
+            border: none;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .toggle-card-btn:hover {
+            background-color: #a0aec0;
+        }
+        .card-body {
+            display: block;
+        }
+        /* 當卡片被收合時的樣式 */
+        .card.collapsed .card-body {
+            display: none;
+        }
+        .card.collapsed {
+            background-color: #edf2f7;
+            padding-bottom: 10px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #4a5568;
+            font-size: 14px;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #cbd5e0;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #3182ce;
+            background-color: #fff;
+        }
+        .result-section {
+            background-color: #fff;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+            border-left: 4px solid #3182ce;
+            font-size: 13px;
+            position: relative;
+        }
+        .result-section.minus-710 { border-left-color: #dd6b20; }
+        .result-section.minus-770 { border-left-color: #e53e3e; }
+        
+        .target-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            padding-right: 40px; /* 留空間給隱藏按鈕 */
+        }
+        .mix-text {
+            color: #319795;
+            font-weight: bold;
+        }
+        .final-score {
+            font-weight: bold;
+            text-align: right;
+            margin-top: 2px;
+        }
+        .close-section-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: #a0aec0;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        .close-section-btn:hover {
+            background-color: #fed7d7;
+            color: #e53e3e;
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <h2>多組數值最佳解計算器 (自由收合版)</h2>
+    
+    <div class="grid-container">
+        <div id="cardsWrapper" style="display: contents;"></div>
+    </div>
+</div>
+
+<script>
+// 動態產生 8 組輸入卡片的 HTML
+const wrapper = document.getElementById('cardsWrapper');
+let cardsHtml = '';
+for (let i = 1; i <= 8; i++) {
+    cardsHtml += `
+        <div class="card" id="card_${i}">
+            <div class="card-header">
+                <div class="card-title">第 ${i} 組計算</div>
+                <button class="toggle-card-btn" onclick="toggleCard(${i})" id="toggleBtn_${i}">收合 ▲</button>
+            </div>
+            <div class="card-body">
+                <div class="input-group">
+                    <label for="input_${i}">輸入數值：</label>
+                    <input type="number" id="input_${i}" value="" placeholder="請輸入數字" oninput="calculateGroup(${i})">
+                </div>
+                <div id="results_${i}"></div>
+            </div>
+        </div>
+    `;
+}
+wrapper.innerHTML = cardsHtml;
+
+// 控制整組卡片收合/展開
+function toggleCard(index) {
+    const card = document.getElementById(`card_${index}`);
+    const btn = document.getElementById(`toggleBtn_${index}`);
+    if (card.classList.contains('collapsed')) {
+        card.classList.remove('collapsed');
+        btn.innerText = "收合 ▲";
+    } else {
+        card.classList.add('collapsed');
+        btn.innerText = "展開 ▼";
+    }
+}
+
+// 隱藏單一計算結果區塊
+function hideSection(btn) {
+    const section = btn.parentElement;
+    section.style.display = 'none';
+}
+
+// 核心演算法：尋找小於等於 0 且最接近 0 的 -250 與 -400 組合
+function findBestCombination(target) {
+    if (target <= 0) return { score: target, c250: 0, c400: 0 };
+
+    let bestScore = -Infinity;
+    let bestCount250 = 0;
+    let bestCount400 = 0;
+    
+    const max250 = Math.ceil(target / 250) + 1;
+    const max400 = Math.ceil(target / 400) + 1;
+
+    for (let i = 0; i <= max250; i++) {
+        for (let j = 0; j <= max400; j++) {
+            let currentResult = target - (i * 250) - (j * 400);
+            if (currentResult <= 0) {
+                if (currentResult > bestScore) {
+                    bestScore = currentResult;
+                    bestCount250 = i;
+                    bestCount400 = j;
+                }
+            }
+        }
+    }
+    return { score: bestScore, c250: bestCount250, c400: bestCount400 };
+}
+
+// 單組計算與畫面渲染
+function calculateGroup(index) {
+    const inputEl = document.getElementById(`input_${index}`);
+    const resultEl = document.getElementById(`results_${index}`);
+    
+    // 如果欄位是空的，就不顯示計算結果
+    if (inputEl.value.trim() === "") {
+        resultEl.innerHTML = "";
+        return;
+    }
+
+    const baseVal = parseFloat(inputEl.value) || 0;
+    
+    const t1 = baseVal;
+    const t2 = baseVal - 710;
+    const t3 = baseVal - 770;
+
+    const res1 = findBestCombination(t1);
+    const res2 = findBestCombination(t2);
+    const res3 = findBestCombination(t3);
+
+    // 重新計算時，會重置顯示狀態
+    resultEl.innerHTML = `
+        <div class="result-section">
+            <button class="close-section-btn" onclick="hideSection(this)">隱藏 ✖</button>
+            <div class="target-title"><span>目標 (原值)：</span><strong>${t1}</strong></div>
+            <div class="mix-text">組合：-250×${res1.c250}次 ＆ -400×${res1.c400}次</div>
+            <div class="final-score" style="color: ${res1.score === 0 ? '#319795' : '#dd6b20'};">結果：${res1.score}</div>
+        </div>
+
+        <div class="result-section minus-710">
+            <button class="close-section-btn" onclick="hideSection(this)">隱藏 ✖</button>
+            <div class="target-title"><span>目標 (原值 - 710)：</span><strong>${t2}</strong></div>
+            <div class="mix-text">組合：-250×${res2.c250}次 ＆ -400×${res2.c400}次</div>
+            <div class="final-score" style="color: ${res2.score === 0 ? '#319795' : '#dd6b20'};">結果：${res2.score}</div>
+        </div>
+
+        <div class="result-section minus-770">
+            <button class="close-section-btn" onclick="hideSection(this)">隱藏 ✖</button>
+            <div class="target-title"><span>目標 (原值 - 770)：</span><strong>${t3}</strong></div>
+            <div class="mix-text">組合：-250×${res3.c250}次 ＆ -400×${res3.c400}次</div>
+            <div class="final-score" style="color: ${res3.score === 0 ? '#319795' : '#dd6b20'};">結果：${res3.score}</div>
+        </div>
+    `;
+}
+</script>
+
+</body>
+</html>
